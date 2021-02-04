@@ -1,6 +1,6 @@
 import numpy as np
-import unittest
-
+import pandas as pd
+import matplotlib.pyplot as plt
 
 class data_set:
 
@@ -83,6 +83,17 @@ class data_set:
 
         return instances_proportions
 
+    def absolute_distrbution_of_instances(self):
+
+        absolute_instances_proportions = []
+
+        for class_label in np.unique(self.y):
+            class_instances = self.x[self.y == class_label]
+            rows, column = np.shape(class_instances)
+            absolute_instances_proportions.append(rows)
+
+        return absolute_instances_proportions
+
 
 data_train_full = data_set("data/train_full.txt")
 
@@ -97,28 +108,59 @@ proportions_sub = data_train_sub.distrbution_of_instances()
 print(proportions_sub)
 
 
-import pandas as pd
-import seaborn as sn
-import matplotlib.pyplot as plt
-
 print(np.unique(y1))
 print(np.unique(y2))
 df = pd.DataFrame(proportions_full, columns = ["Full set"])
 df["Sub set"] = proportions_sub
 df.index = np.unique(y1)
-#sn.barplot(x = "Class", y= "Proportion", df['Full set'])
 print(df)
-dft = df.T
-ax = sn.barplot(df["Full set"])
-print(dft)
-#sn.barplot(df['Sub set'])
 
-#plt.show()
-
+"""
 df.plot(kind="bar")
 plt.title("Class distribution in two sets")
 plt.xlabel("Classes")
 plt.ylabel("Proportion")
 plt.show()
+"""
+# Question 1.3
+
+data_noisy = data_set("data/train_noisy.txt")
+
+x_noisy, y_noisy = data_noisy.read_data()
+#y_differences = y1[y_noisy != y1 and x_noisy == x1]
+#print(len(y_differences))
+print(len(y_noisy))
+print(len(y1))
+print(np.array_equal(x_noisy, x1))
+
+xy_noisy = np.column_stack((x_noisy, y_noisy))
+xy1 = np.column_stack((x1, y1))
+
+
+sorted_noisy = np.sort(xy_noisy, axis=0)
+sorted_full = np.sort(xy1, axis=0)
+print(np.array_equal(sorted_noisy[:-2], sorted_full[:-2]))
+#print(sorted_noisy[:-2])
+
+#print(sorted_noisy[456])
+#print(sorted_full[456])
+differences_sorted = sorted_full[sorted_full != sorted_noisy]
+print(differences_sorted)
+
+proportions_noisy = data_noisy.absolute_distrbution_of_instances()
+
+proportions_full = data_train_full.absolute_distrbution_of_instances()
+df_noisy = pd.DataFrame(proportions_full, columns = ["Full set"])
+df_noisy["Noisy set"] = proportions_noisy
+
+df_noisy.index = np.unique(y1)
+print(df_noisy)
+
+df_noisy.plot(kind="bar")
+plt.title("Class distribution in two sets")
+plt.xlabel("Classes")
+plt.ylabel("Proportion")
+plt.show()
+
 
 
