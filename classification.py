@@ -12,8 +12,6 @@ import math
 
 
 class SplitCondition:
-    """ Class that stores the split condition (e.g x > num)"""
-
     def __init__(self, column, value):
         self.column = column
         self.value = value
@@ -25,8 +23,7 @@ class SplitCondition:
         return num_to_check >= self.value
 
     def __repr__(self):
-        # This is just a helper method to print
-        # the question in a readable format.
+        # Helper method to print the question in a readable format.
 
         condition = ">="
         return "Is %s %s %s?" % (
@@ -99,12 +96,15 @@ def find_counts(dataset):
         counts[label] += 1
     return counts
 
+
 class Leaf:
+    # Holds a dict of a label
     def __init__(self, dataset):
         self.predictions = find_counts(dataset)
 
 
 class DecisionNode:
+    # Holds reference to split_condition and the two child nodes
     def __init__(self, split_condition, true_branch, false_branch):
         self.split_condition = split_condition
         self.true_branch = true_branch
@@ -131,8 +131,8 @@ def construct_tree(dataset):
     # Return question node
     return DecisionNode(split_condition, true_branch, false_branch)
 
+
 def print_tree(node, spacing=""):
-    """World's most elegant tree printing function."""
     classes = ["A", "C", "E", "G", "O", "Q"]
 
     # Base case: we've reached a leaf
@@ -141,15 +141,26 @@ def print_tree(node, spacing=""):
         return
 
     # Print the question at this node
-    print (spacing + str(node.split_condition))
+    print(spacing + str(node.split_condition))
 
     # Call this function recursively on the true branch
-    print (spacing + '--> True:')
+    print(spacing + '--> True:')
     print_tree(node.true_branch, spacing + "  ")
 
     # Call this function recursively on the false branch
-    print (spacing + '--> False:')
+    print(spacing + '--> False:')
     print_tree(node.false_branch, spacing + "  ")
+
+
+def predict_helper(row, node):
+    if isinstance(node, Leaf):
+        print(node.predictions.keys())
+        return node.predictions.keys()
+
+    if node.split_condition.check(row):
+        return predict_helper(row, node.true_branch)
+    else:
+        return predict_helper(row, node.false_branch)
 
 
 class DecisionTreeClassifier(object):
@@ -185,8 +196,9 @@ class DecisionTreeClassifier(object):
 
         #######################################################################
         #                 ** TASK 2.1: COMPLETE THIS METHOD **
-        #######################################################################    
+        #######################################################################
 
+        y = np.reshape(y, (-1, 1))  # we have to reshape y from 1d to 2d
         dataset = np.concatenate((x, y), axis=1)
 
         self.decision_tree = construct_tree(dataset)
@@ -197,16 +209,14 @@ class DecisionTreeClassifier(object):
     def return_decision_tree(self):
         return self.decision_tree
 
-    def predict_helper(self, row, node):
+    """def predict_helper(self, row, node):
         if isinstance(node, Leaf):
-            print(node.predictions)
-            a_list = list(node.predictions.keys())
-            return a_list[0]
+            return node.predictions
 
-        if self.decision_tree.split_condition.check(row):
+        if node.split_condition.check(row):
             return self.predict_helper(row, node.true_branch)
         else:
-            return self.predict_helper(row, node.false_branch)
+            return self.predict_helper(row, node.false_branch)"""
 
     def predict(self, x):
         """ Predicts a set of samples using the trained DecisionTreeClassifier.
@@ -236,8 +246,12 @@ class DecisionTreeClassifier(object):
         #######################################################################
 
         # remember to change this if you rename the variable
-        for row in x:
-            np.append(predictions, self.predict_helper(row, self.decision_tree))
+        for (i, row) in enumerate(x):
+            key_list = list(predict_helper(row, self.decision_tree))
+            print(key_list)
+            print(key_list[0])
+            predictions[i] = int(key_list[0])
+            #np.append(predictions, predict_helper(row, self.decision_tree))
 
         return predictions
 
@@ -261,4 +275,3 @@ class DecisionTreeClassifier(object):
         #######################################################################
         #                 ** TASK 4.1: COMPLETE THIS METHOD **
         #######################################################################
-

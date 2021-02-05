@@ -72,7 +72,7 @@ class data_set:
             print(str(x_class.var(axis=0)))
             print('\n')
 
-    def distrbution_of_instances(self):
+    def distribution_of_instances(self):
         instances_proportions = []
         rows, columns = np.shape(self.x)
         total_number_of_instances = rows
@@ -83,7 +83,7 @@ class data_set:
 
         return instances_proportions
 
-    def absolute_distrbution_of_instances(self):
+    def absolute_distribution_of_instances(self):
 
         absolute_instances_proportions = []
 
