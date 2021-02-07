@@ -9,6 +9,7 @@
 
 import numpy as np
 import math
+from evaluation import *
 
 
 class SplitCondition:
@@ -44,11 +45,18 @@ def split_data(data_to_split, split_condition):
 
 def find_best_split(dataset):
     best_gain = 0
-    best_question = None
+    best_split = None
     parent_entropy = find_entropy(dataset)
     n_features = len(dataset[0]) - 1  # number of columns
+    previous_col = -1
 
     for col in range(n_features):  # for each feature
+        if col == previous_col:
+            print("skipped")
+            continue
+
+        previous_col = col
+
         values = set([row[col] for row in dataset])  # unique values in column
 
         for val in values:
@@ -67,9 +75,9 @@ def find_best_split(dataset):
             gain = parent_entropy - entropy
 
             if gain >= best_gain:
-                best_gain, best_question = gain, split_condition
+                best_gain, best_split = gain, split_condition
 
-    return best_gain, best_question
+    return best_gain, best_split
 
 
 def find_entropy(dataset):
@@ -111,13 +119,14 @@ class DecisionNode:
         self.false_branch = false_branch
 
 
+
 def construct_tree(dataset):
     # Try partitioning the dataset on each attribute
     gain, split_condition = find_best_split(dataset)
 
     # Base case: no further information gain so return a leaf
-    if gain == 0:
-        return Leaf(dataset)
+    if gain < 0.03:
+        return Leaf(dataset) # return DecisionNode(null,null,null, dataset)
 
     # Found attribute to partition on
     true_dataset, false_dataset = split_data(dataset, split_condition)
@@ -133,7 +142,8 @@ def construct_tree(dataset):
 
 
 def print_tree(node, spacing=""):
-    classes = ["A", "C", "E", "G", "O", "Q"]
+    #print the classes 'A', 'C', etc instead of '0.0', '1.0' etc
+    #classes = ["A", "C", "E", "G", "O", "Q"]
 
     # Base case: we've reached a leaf
     if isinstance(node, Leaf):
@@ -154,7 +164,6 @@ def print_tree(node, spacing=""):
 
 def predict_helper(row, node):
     if isinstance(node, Leaf):
-        print(node.predictions.keys())
         return node.predictions.keys()
 
     if node.split_condition.check(row):
@@ -206,6 +215,8 @@ class DecisionTreeClassifier(object):
         # set a flag so that we know that the classifier has been trained
         self.is_trained = True
 
+        return self.decision_tree
+
     def return_decision_tree(self):
         return self.decision_tree
 
@@ -248,10 +259,7 @@ class DecisionTreeClassifier(object):
         # remember to change this if you rename the variable
         for (i, row) in enumerate(x):
             key_list = list(predict_helper(row, self.decision_tree))
-            print(key_list)
-            print(key_list[0])
             predictions[i] = int(key_list[0])
-            #np.append(predictions, predict_helper(row, self.decision_tree))
 
         return predictions
 
@@ -275,3 +283,58 @@ class DecisionTreeClassifier(object):
         #######################################################################
         #                 ** TASK 4.1: COMPLETE THIS METHOD **
         #######################################################################
+
+        self.prune_tree(self.decision_tree, x_val, y_val)
+        return self.decision_tree
+
+    def prune_tree(self, node, x_val, y_val):
+        evaluator = Evaluate()
+        confusion = evaluator.confusion_matrix(y_val, self.predict(x_val))
+        prev_accuracy = evaluator.accuracy_from_confusion(confusion)
+
+        if isinstance(node, Leaf):
+            return
+
+        if isinstance(node.true_branch, Leaf) and isinstance(node.false_branch, Leaf):
+            # get accuracy before
+
+            true_dict = node.true_branch.predictions
+            false_dict = node.false_branch.predictions
+
+            true_key_list = list(true_dict)
+            false_key_list = list(false_dict)
+
+            true_value = true_dict[true_key_list[0]]
+            false_value = false_dict[false_key_list[0]]
+
+            # turn parent node into leaf
+            if true_value >= false_value:
+                node.false_branch.predictions = true_dict
+            else:
+                node.true_branch.predictions = false_dict
+
+            evaluator = Evaluate()
+            confusion = evaluator.confusion_matrix(y_val, self.predict(x_val))
+            pruned_accuracy = evaluator.accuracy_from_confusion(confusion)
+            """
+            print(pruned_accuracy)
+            print(prev_accuracy)
+            print(".")
+            """
+
+            if pruned_accuracy <= prev_accuracy:
+                node.true_branch.predictions = true_dict
+                node.false_branch.predictions = false_dict
+            if pruned_accuracy > prev_accuracy:
+                print("prune successful")
+
+        self.prune_tree(node.true_branch, x_val, y_val)
+        self.prune_tree(node.false_branch, x_val, y_val)
+
+
+
+
+
+
+
+
