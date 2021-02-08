@@ -13,22 +13,21 @@ from evaluation import *
 
 
 class SplitCondition:
-    def __init__(self, column, value):
-        self.column = column
+    def __init__(self, attribute, value):
+        self.attribute = attribute
         self.value = value
         self.classes = ["x-box", "y-box", "width", "high", "onpix", "x-bar", "y-bar", "x2bar",
                         "y2bar", "xybar", "x2ybr", "xy2br", "x-ege", "xegvy", "y-ege", "yegvx"]
 
     def check(self, row_to_check):
-        num_to_check = row_to_check[self.column]
+        num_to_check = row_to_check[self.attribute]
         return num_to_check >= self.value
 
     def __repr__(self):
         # Helper method to print the question in a readable format.
 
         condition = ">="
-        return "Is %s %s %s?" % (
-            self.classes[self.column], condition, str(self.value))
+        return "Is %s %s %s?" % (self.classes[self.attribute], condition, str(self.value))
 
 
 def split_data(data_to_split, split_condition):
@@ -47,7 +46,7 @@ def find_best_split(dataset):
     best_gain = 0
     best_split = None
     parent_entropy = find_entropy(dataset)
-    n_features = len(dataset[0]) - 1  # number of columns
+    n_features = len(dataset[0]) - 1  # number of attributes (columns)
     previous_col = -1
 
     for col in range(n_features):  # for each feature
@@ -60,6 +59,10 @@ def find_best_split(dataset):
         values = set([row[col] for row in dataset])  # unique values in column
 
         for val in values:
+            if isinstance(val, str):
+                print(val)
+                continue
+
             split_condition = SplitCondition(col, val)
 
             # Try splitting dataset
@@ -125,7 +128,7 @@ def construct_tree(dataset):
     gain, split_condition = find_best_split(dataset)
 
     # Base case: no further information gain so return a leaf
-    if gain < 0.03:
+    if gain == 0:
         return Leaf(dataset) # return DecisionNode(null,null,null, dataset)
 
     # Found attribute to partition on
@@ -183,12 +186,13 @@ class DecisionTreeClassifier(object):
     predict(x): Predicts the class label of samples X
     prune(x_val, y_val): Post-prunes the decision tree
     """
+    y_dict = {0: "A", 1: "C", 2: "E", 3: "G", 4: "O", 5: "Q"}
 
     def __init__(self):
         self.is_trained = False
         self.decision_tree = None
 
-    def fit(self, x, y):
+    def fit(self, x, y_str):
         """ Constructs a decision tree classifier from data
         
         Args:
@@ -200,15 +204,15 @@ class DecisionTreeClassifier(object):
         """
 
         # Make sure that x and y have the same number of instances
-        assert x.shape[0] == len(y), \
+        assert x.shape[0] == len(y_str), \
             "Training failed. x and y must have the same number of instances."
 
         #######################################################################
         #                 ** TASK 2.1: COMPLETE THIS METHOD **
         #######################################################################
-
-        y = np.reshape(y, (-1, 1))  # we have to reshape y from 1d to 2d
-        dataset = np.concatenate((x, y), axis=1)
+        (classes, y_int) = np.unique(y_str, return_inverse=True)
+        y_int = np.reshape(y_int, (-1, 1))  # we have to reshape y from 1d to 2d
+        dataset = np.concatenate((x, y_int), axis=1)
 
         self.decision_tree = construct_tree(dataset)
 
@@ -259,7 +263,7 @@ class DecisionTreeClassifier(object):
         # remember to change this if you rename the variable
         for (i, row) in enumerate(x):
             key_list = list(predict_helper(row, self.decision_tree))
-            predictions[i] = int(key_list[0])
+            predictions[i] = self.y_dict[key_list[0]]
 
         return predictions
 
