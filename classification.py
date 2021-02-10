@@ -7,7 +7,6 @@
 # DecisionTreeClassifier. You are free to add any other methods as needed. 
 ##############################################################################
 
-import numpy as np
 import math
 from evaluation import *
 
@@ -23,9 +22,8 @@ class SplitCondition:
         num_to_check = row_to_check[self.attribute]
         return num_to_check >= self.value
 
+    # Helper method to print the SplitCondition in a readable format.
     def __repr__(self):
-        # Helper method to print the question in a readable format.
-
         condition = ">="
         return "Is %s %s %s?" % (self.classes[self.attribute], condition, str(self.value))
 
@@ -46,12 +44,12 @@ def find_best_split(dataset):
     best_gain = 0
     best_split = None
     parent_entropy = find_entropy(dataset)
-    n_features = len(dataset[0]) - 1  # number of attributes (columns)
+    n_attributes = len(dataset[0]) - 1  # number of attributes (columns)
     previous_col = -1
 
-    for col in range(n_features):  # for each feature
+    for col in range(n_attributes):  # for each attribute
+        # ensure we are not splitting on the same attribute
         if col == previous_col:
-            print("skipped")
             continue
 
         previous_col = col
@@ -99,7 +97,7 @@ def find_distribution(dataset):
 
 
 def find_counts(dataset):
-    counts = {}  # a dictionary of label -> count.
+    counts = {}
     for row in dataset:
         label = row[-1]
         if label not in counts:
@@ -122,53 +120,40 @@ class DecisionNode:
         self.false_branch = false_branch
 
 
+def construct_tree(dataset, minimum_gain):
+    if minimum_gain > 1:
+        print("Minimum gain is set to 1 (it cannot be greater than 1).")
+        minimum_gain = 1
 
-def construct_tree(dataset):
-    # Try partitioning the dataset on each attribute
+    if minimum_gain < 0:
+        print("Minimum gain is set to 0 (it cannot be less than 0).")
+        minimum_gain = 0
+
+    # Try to split the dataset on each attribute
     gain, split_condition = find_best_split(dataset)
 
-    # Base case: no further information gain so return a leaf
-    if gain == 0:
-        return Leaf(dataset) # return DecisionNode(null,null,null, dataset)
+    # Base case checks for no further information gain so return a leaf
+    if gain <= minimum_gain:
+        return Leaf(dataset)
 
-    # Found attribute to partition on
+    # Found attribute to partition on, so split dataset
     true_dataset, false_dataset = split_data(dataset, split_condition)
 
-    # Recursively build true branch
-    true_branch = construct_tree(true_dataset)
+    # Recurse through true and false branch
+    true_branch = construct_tree(true_dataset, minimum_gain)
+    false_branch = construct_tree(false_dataset, minimum_gain)
 
-    # Recursively build false branch
-    false_branch = construct_tree(false_dataset)
-
-    # Return question node
+    # Return root Decision node
     return DecisionNode(split_condition, true_branch, false_branch)
 
 
-def print_tree(node, spacing=""):
-    #print the classes 'A', 'C', etc instead of '0.0', '1.0' etc
-    #classes = ["A", "C", "E", "G", "O", "Q"]
-
-    # Base case: we've reached a leaf
-    if isinstance(node, Leaf):
-        print(spacing + "Predict", node.predictions)
-        return
-
-    # Print the question at this node
-    print(spacing + str(node.split_condition))
-
-    # Call this function recursively on the true branch
-    print(spacing + '--> True:')
-    print_tree(node.true_branch, spacing + "  ")
-
-    # Call this function recursively on the false branch
-    print(spacing + '--> False:')
-    print_tree(node.false_branch, spacing + "  ")
-
-
 def predict_helper(row, node):
+
+    # Base case checks if the current node is a leaf
     if isinstance(node, Leaf):
         return node.predictions.keys()
 
+    # Check if we should recurse through true or false branch
     if node.split_condition.check(row):
         return predict_helper(row, node.true_branch)
     else:
@@ -192,7 +177,7 @@ class DecisionTreeClassifier(object):
         self.is_trained = False
         self.decision_tree = None
 
-    def fit(self, x, y_str):
+    def fit(self, x, y_str, minimum_gain=0):
         """ Constructs a decision tree classifier from data
         
         Args:
@@ -214,24 +199,12 @@ class DecisionTreeClassifier(object):
         y_int = np.reshape(y_int, (-1, 1))  # we have to reshape y from 1d to 2d
         dataset = np.concatenate((x, y_int), axis=1)
 
-        self.decision_tree = construct_tree(dataset)
+        self.decision_tree = construct_tree(dataset, minimum_gain)
 
         # set a flag so that we know that the classifier has been trained
         self.is_trained = True
 
         return self.decision_tree
-
-    def return_decision_tree(self):
-        return self.decision_tree
-
-    """def predict_helper(self, row, node):
-        if isinstance(node, Leaf):
-            return node.predictions
-
-        if node.split_condition.check(row):
-            return self.predict_helper(row, node.true_branch)
-        else:
-            return self.predict_helper(row, node.false_branch)"""
 
     def predict(self, x):
         """ Predicts a set of samples using the trained DecisionTreeClassifier.
@@ -260,7 +233,6 @@ class DecisionTreeClassifier(object):
         #                 ** TASK 2.2: COMPLETE THIS METHOD **
         #######################################################################
 
-        # remember to change this if you rename the variable
         for (i, row) in enumerate(x):
             key_list = list(predict_helper(row, self.decision_tree))
             predictions[i] = self.y_dict[key_list[0]]
@@ -289,6 +261,7 @@ class DecisionTreeClassifier(object):
         #######################################################################
 
         self.prune_tree(self.decision_tree, x_val, y_val)
+
         return self.decision_tree
 
     def prune_tree(self, node, x_val, y_val):
@@ -296,12 +269,11 @@ class DecisionTreeClassifier(object):
         confusion = evaluator.confusion_matrix(y_val, self.predict(x_val))
         prev_accuracy = evaluator.accuracy_from_confusion(confusion)
 
+        # Base case checks if current node is a leaf
         if isinstance(node, Leaf):
             return
 
         if isinstance(node.true_branch, Leaf) and isinstance(node.false_branch, Leaf):
-            # get accuracy before
-
             true_dict = node.true_branch.predictions
             false_dict = node.false_branch.predictions
 
@@ -317,23 +289,53 @@ class DecisionTreeClassifier(object):
             else:
                 node.true_branch.predictions = false_dict
 
-            evaluator = Evaluate()
             confusion = evaluator.confusion_matrix(y_val, self.predict(x_val))
             pruned_accuracy = evaluator.accuracy_from_confusion(confusion)
-            """
-            print(pruned_accuracy)
-            print(prev_accuracy)
-            print(".")
-            """
 
             if pruned_accuracy <= prev_accuracy:
                 node.true_branch.predictions = true_dict
                 node.false_branch.predictions = false_dict
-            if pruned_accuracy > prev_accuracy:
-                print("prune successful")
 
         self.prune_tree(node.true_branch, x_val, y_val)
         self.prune_tree(node.false_branch, x_val, y_val)
+
+    def pre_prune_tree(self, x_train, y_train, x_val, y_val, step_size, max_gain):
+        if max_gain < 0:
+            print("Max gain is set to 0 (it cannot be less than 1).")
+            max_gain = 0
+
+        if max_gain > 1:
+            print("Max gain is set to 1 (it cannot be greater than 1).")
+            max_gain = 1
+
+        # Get accuracy before pre-pruning the tree
+        evaluator = Evaluate()
+        confusion = evaluator.confusion_matrix(y_val, self.predict(x_val))
+        prev_accuracy = evaluator.accuracy_from_confusion(confusion)
+        max_accuracy = prev_accuracy
+        optimal_gain = 0
+
+        i = 0
+        while i <= max_gain:
+            # Get accuracy of the tree after pre-pruning
+            self.fit(x_train, y_train, i)
+            confusion = evaluator.confusion_matrix(y_val, self.predict(x_val))
+            pre_pruned_accuracy = evaluator.accuracy_from_confusion(confusion)
+
+            # If accuracy has improved, store it in max_accuracy for future comparison
+            if pre_pruned_accuracy > max_accuracy:
+                max_accuracy = pre_pruned_accuracy
+                optimal_gain = i
+
+            i += step_size
+
+        # retrain the decision tree with the new optimal gain
+        self.fit(x_train, y_train, optimal_gain)
+        print("Optimal gain is %s" % optimal_gain)
+        return optimal_gain
+
+
+
 
 
 

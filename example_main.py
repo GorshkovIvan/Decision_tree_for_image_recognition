@@ -34,7 +34,7 @@ if __name__ == "__main__":
             [1,5,0], 
             [2,4,2]
         ])
-    
+
     y_test = np.array(["A", "A", "C", "C"])
     
     print("Making predictions on the test set...")
@@ -53,6 +53,7 @@ if __name__ == "__main__":
     classifier.prune(x_val, y_val)
     
     print("Making predictions on the test set using the pruned decision tree...")
+
     predictions = classifier.predict(x_test)
     print("Predictions: {}".format(predictions))
 

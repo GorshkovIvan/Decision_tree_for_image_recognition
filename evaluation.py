@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.random import default_rng
 
+
 class Evaluate(object):
     def confusion_matrix(self, y_gold, y_prediction, class_labels=None):
         """ Compute the confusion matrix.
@@ -201,19 +202,19 @@ class Evaluate(object):
         return folds
 
     def average_accuracy_across_k_folds(self, n_folds, x_full, y_full, classifier):
-        accuracies = np.zeros((n_folds, ))
+        accuracies = np.zeros((n_folds,))
         max_accuracy = 0
-        trained_trees = []
+        trained_trees_list = []
 
         for i, (train_indices, test_indices) in enumerate(
-            self.train_test_k_fold(n_folds, len(x_full))):
+                self.train_test_k_fold(n_folds, len(x_full))):
             # get the dataset from the correct splits
             x_train = x_full[train_indices, :]
             y_train = y_full[train_indices]
             x_test = x_full[test_indices, :]
             y_test = y_full[test_indices]
 
-            trained_trees.append(classifier.fit(x_train, y_train))
+            trained_trees_list.append(classifier.fit(x_train, y_train))
             y_predicted = classifier.predict(x_test)
 
             confusion_matrix = self.confusion_matrix(y_test, y_predicted)
@@ -224,17 +225,15 @@ class Evaluate(object):
 
             accuracies[i] = accuracy
 
-        print("Accuracies for k_folds:")
+        print("Accuracies for %s folds:" % n_folds)
         print(accuracies)
-        print("Mean accuracy:")
+        print("Mean accuracy for %s folds:" % n_folds)
         print(accuracies.mean())
-        print("Standard deviation:")
+        print("Standard deviation for %s folds:" % n_folds)
         print(accuracies.std())
-        print("Max accuracy:")
+        print("Max accuracy for %s folds:" % n_folds)
         print(max_accuracy)
 
         # return the decision tree model with highest accuracy
+        trained_trees = np.array(trained_trees_list)
         return trained_trees, trained_trees[np.argmax(accuracies)]
-
-    #def find_mode_of_col_in_array(self, array):
-
