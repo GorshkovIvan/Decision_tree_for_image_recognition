@@ -177,7 +177,7 @@ class DecisionTreeClassifier(object):
         self.is_trained = False
         self.decision_tree = None
 
-    def fit(self, x, y_str, minimum_gain=0):
+    def fit(self, x, y, minimum_gain=0):
         """ Constructs a decision tree classifier from data
         
         Args:
@@ -189,13 +189,13 @@ class DecisionTreeClassifier(object):
         """
 
         # Make sure that x and y have the same number of instances
-        assert x.shape[0] == len(y_str), \
+        assert x.shape[0] == len(y), \
             "Training failed. x and y must have the same number of instances."
 
         #######################################################################
         #                 ** TASK 2.1: COMPLETE THIS METHOD **
         #######################################################################
-        (classes, y_int) = np.unique(y_str, return_inverse=True)
+        (classes, y_int) = np.unique(y, return_inverse=True)
         y_int = np.reshape(y_int, (-1, 1))  # we have to reshape y from 1d to 2d
         dataset = np.concatenate((x, y_int), axis=1)
 
@@ -295,6 +295,8 @@ class DecisionTreeClassifier(object):
             if pruned_accuracy <= prev_accuracy:
                 node.true_branch.predictions = true_dict
                 node.false_branch.predictions = false_dict
+            else:
+                print("pruned!")
 
         self.prune_tree(node.true_branch, x_val, y_val)
         self.prune_tree(node.false_branch, x_val, y_val)
